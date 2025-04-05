@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chord Progression Builder</title> <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🎵%3C/text%3E%3C/svg%3E">
+
+</head>
+<body class="bg-gray-900 text-gray-200 font-sans flex flex-col h-screen">
+
+    <header class="bg-gray-800 p-2 text-sm shadow-md flex justify-between items-center flex-wrap gap-x-4 gap-y-2">
+        <span class="font-bold text-lg text-white">Chord Builder</span>
+        <div class="flex items-center flex-wrap gap-x-4 gap-y-2">
+            <div class="flex items-center space-x-2 border-r border-gray-600 pr-4">
+                <button id="save-file-button" title="Save song structure to a file (.cbsong)" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-1 px-3 rounded-md flex items-center transition duration-150 ease-in-out">
+                    <span class="lucide mr-1 text-base">&#xe9c7;</span> Save File
+                </button>
+                <button id="load-file-button" title="Load song structure from a file (.cbsong)" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-1 px-3 rounded-md flex items-center transition duration-150 ease-in-out">
+                    <span class="lucide mr-1 text-base">&#xe9b5;</span> Load File
+                </button>
+                <input type="file" id="file-input" accept=".cbsong,.json" class="hidden">
+            </div>
+            <div class="flex items-center space-x-2 border-r border-gray-600 pr-4">
+                <button id="play-button" class="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded-md flex items-center transition duration-150 ease-in-out disabled:opacity-50">
+                    <span class="lucide mr-1">&#xea4a;</span> Play
+                </button>
+                <button id="stop-button" class="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded-md flex items-center transition duration-150 ease-in-out disabled:opacity-50" disabled>
+                    <span class="lucide mr-1">&#xeae0;</span> Stop
+                </button>
+                <div class="flex items-center ml-2">
+                    <input type="checkbox" id="loop-toggle" class="form-checkbox bg-gray-700 border-gray-600 text-indigo-500 rounded focus:ring-indigo-400 focus:ring-offset-gray-800">
+                    <label for="loop-toggle" class="ml-2 text-xs text-gray-300 select-none">Loop</label>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2 border-r border-gray-600 pr-4">
+                <label for="tempo" class="text-xs">Tempo:</label>
+                <input type="number" id="tempo" value="120" min="40" max="240" class="bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-sm w-16 text-center">
+                <span class="text-xs">BPM</span>
+            </div>
+            <div class="flex items-center space-x-2 border-r border-gray-600 pr-4">
+                <label for="time-signature" class="text-xs">Time Sig:</label>
+                <select id="time-signature" class="bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-sm text-gray-200">
+                    <option value="4/4" selected>4/4</option>
+                    <option value="3/4">3/4</option>
+                    <option value="2/4">2/4</option>
+                    <option value="6/8">6/8</option>
+                </select>
+            </div>
+            <div class="flex items-center space-x-2 border-r border-gray-600 pr-4">
+                <label for="style" class="text-xs">Style:</label>
+                <select id="style" class="bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-sm text-gray-200">
+                    <option value="basic" selected>Basic</option>
+                    <option value="pop">Pop</option>
+                    <option value="rock">Rock</option>
+                    <option value="latin">Latin</option>
+                </select>
+            </div>
+             <div class="flex items-center space-x-2">
+                <label for="output-mode" class="text-xs">Output:</label>
+                <select id="output-mode" class="bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-sm text-gray-200">
+                    <option value="synth" selected>Internal Synth</option>
+                    <option value="midi">MIDI Out</option>
+                </select>
+            </div>
+            <div class="flex items-center space-x-2">
+                <label for="midi-output" class="text-xs sr-only">MIDI Device:</label>
+                <select id="midi-output" class="bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-sm max-w-xs text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    <option value="">No MIDI Output</option>
+                    </select>
+                <span id="midi-status" class="midi-status w-3 h-3 bg-red-500 rounded-full" title="MIDI Status: Red=Inactive/No Access, Yellow=Access Granted, Green=Active Output Selected"></span>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow flex flex-col md:flex-row p-4 gap-4 overflow-hidden">
+
+        <section class="bg-gray-800 p-4 rounded-lg shadow-lg flex-shrink-0 md:w-64 flex flex-col">
+            <h2 class="text-lg font-semibold mb-4 text-white border-b border-gray-700 pb-2">Chord Palette</h2>
+            <div class="space-y-3 overflow-y-auto">
+                <div>
+                    <h3 class="text-sm font-medium mb-2 text-gray-400">Root Note</h3>
+                    <div id="note-buttons" class="grid grid-cols-4 gap-2">
+                        </div>
+                </div>
+                <div>
+                    <h3 class="text-sm font-medium mb-2 text-gray-400">Chord Type</h3>
+                    <div id="type-buttons" class="grid grid-cols-3 gap-2">
+                        </div>
+                </div>
+                <button id="add-chord-button" class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed">
+                    Add Chord to Selected Page
+                </button>
+                <div id="selected-chord-display" class="mt-3 text-center text-xl font-mono p-2 bg-gray-700 rounded-md h-10 flex items-center justify-center">
+                    <span class="text-gray-500">--</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="bg-gray-800 p-4 rounded-lg shadow-lg flex-grow flex flex-col overflow-hidden">
+
+            <div class="mb-3 border-b border-gray-700 pb-3">
+                <h2 class="text-lg font-semibold text-white mb-2">Song Structure</h2>
+                 <div class="flex items-center gap-2 flex-wrap mb-2">
+                     <label for="new-page-name-input" class="text-sm text-gray-400 mr-1">New Page Name:</label>
+                     <input type="text" id="new-page-name-input" placeholder="e.g., Verse" class="bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-sm w-32">
+                     <button id="add-new-page-button" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold py-1 px-3 rounded-md transition duration-150 ease-in-out">
+                        Add to Structure
+                     </button>
+                     </div>
+                <div id="song-structure-area" class="mt-1 bg-gray-900 rounded-md p-2 flex items-center flex-wrap gap-2 min-h-[40px] overflow-x-auto"> <span class="text-gray-500 italic text-sm mx-auto">Add pages using the input above to build the song structure</span>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center mb-1">
+                <h2 id="chord-progression-title" class="text-lg font-semibold text-white">Chord Progression (No Page Selected)</h2>
+                <button id="clear-page-button" class="text-red-400 hover:text-red-300 text-xs font-medium flex items-center disabled:opacity-50" disabled>
+                    <span class="lucide mr-1 text-sm">&#xea3a;</span> Clear Page Chords
+                </button>
+            </div>
+            <div id="chord-progression" class="flex-grow bg-gray-900 rounded-md p-3 flex items-start gap-3 overflow-x-auto overflow-y-hidden min-h-[100px]">
+                <span id="chord-progression-placeholder" class="text-gray-500 italic self-center mx-auto">Select or add a page above to view/edit its chords</span>
+                </div>
+
+            <div id="message-box" class="mt-2 text-center text-sm text-yellow-400 h-5"></div>
+        </section>
+
+    </main>
+
+    <script type="module" defer src="main.js"></script>
+
+</body>
+</html>
